@@ -1,7 +1,9 @@
 import time
 from decimal import Decimal
-from flask import Flask, jsonify, request
+from collections import Counter
+
 from redis import StrictRedis
+from flask import Flask, jsonify, request
 
 app = Flask(__name__)
 store = StrictRedis()
@@ -45,3 +47,16 @@ def create_transaction():
         }}
 
         return jsonify(data)
+
+@app.route('/users/', methods=['GET'])
+def get_users():
+    transactions = store.keys('*:*:*:*')
+    users = Counter()
+    for t in transactions:
+        t = t.decode('utf-8')
+        value = int(store.get(t))
+        creditor, debtor = t.split(':')[1:3]
+        users[creditor] += value
+        users[debtor] -= value
+
+    return jsonify(users=users)
